@@ -1,0 +1,22 @@
+#!/bin/sh
+
+#
+# Stop the Tibero service container and remove it.
+#
+# environment variables:
+#   Check for the 'get_env.sh' file to get which environment variables are available.
+#
+
+# external envs
+export ENV_FILE    # which env file to read
+
+# path envs
+BIN_ORIG="$(readlink -f "${0}")"
+ROOT_DIR="$(dirname "${BIN_ORIG?:binary path error!}")"
+
+# load common env
+. "${ROOT_DIR}/get_env.sh"
+
+
+# disable and remove the Tibero service container
+${OCI_CMD} rm -f "${TB_CNT_NAME}"

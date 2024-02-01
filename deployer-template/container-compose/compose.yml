@@ -1,0 +1,44 @@
+# compose.yml for Tibero OCI Image
+#
+# Tibero service compose file for docker.io/tmaxfocus/tibero*
+#
+# Run compose-init.yml file before using this, to initialize necessary volume
+
+# envs
+#
+# [REQUIRED]
+#   - TB_HOSTNAME: Tibero hostname: must be the same with licensee name in license.xml
+#   - TB_IMG_NAME: Tibero image to use
+#
+# [OPTIONAL]
+#   - TB_CNT_NAME: Base name for Tibero container (default: tb)
+#   - TB_PORT: Tibero port to use (default: 10000)
+#   - TB_CNT_RESTART_POLICY: Tibero container restart policy (default: unless-stopped)
+#   - TB_CNT_STOP_TIMEOUT: Tibero container stop timeout (default: 120s)
+#   - TB_VOLUME_MOUNT_PATH: External volume mount path - this determines which data to persist
+#                           (default: '/opt/tibero/persistable')
+#   - TB_READY_SIGNAL_PATTERN: Text to print to the container log,
+#                              when Tibero is up and ready for receiving queries
+version: "3"
+
+
+services:
+  tb:
+    image: "${TB_IMG_NAME:?Missing environment variable for Tibero image name (TB_IMG_NAME)}"
+    container_name: "${TB_CNT_NAME:-tb}-${TB_PORT:-10000}"
+    hostname: "${TB_HOSTNAME:?Missing environment variable for Tibero hostname (TB_HOSTNAME)}"
+    ports: [ "${TB_PORT:-10000}:8629" ]
+    volumes:
+      - type: volume
+        source: tb-vol
+        target: ${TB_VOLUME_MOUNT_PATH:-/opt/tibero/persistable}
+    restart: ${TB_CNT_RESTART_POLICY:-unless-stopped}
+    stop_grace_period: ${TB_CNT_STOP_TIMEOUT:-120s}
+    environment:
+      TB_READY_SIGNAL_PATTERN: "${TB_READY_SIGNAL_PATTERN:-}"
+    network_mode: bridge
+
+volumes:
+  tb-vol:
+    name: "${TB_CNT_NAME:-tb}-${TB_PORT:-10000}"
+    external: true

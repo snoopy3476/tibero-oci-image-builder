@@ -1,0 +1,25 @@
+#!/bin/sh
+
+#
+# Get logs of the running Tibero service container.
+#
+# args:
+#   arguments of 'podman logs' or 'docker logs', except for the container name
+#
+# environment variables:
+#   Check for the 'get_env.sh' file to get which environment variables are available.
+#
+
+# external envs
+export ENV_FILE    # which env file to read
+
+# path envs
+BIN_ORIG="$(readlink -f "${0}")"
+ROOT_DIR="$(dirname "${BIN_ORIG?:binary path error!}")"
+
+# load common env
+. "${ROOT_DIR}/get_env.sh"
+
+
+# start container and initialization process
+${OCI_CMD} logs "${@}" "${TB_CNT_NAME}"

@@ -1,0 +1,39 @@
+#!/bin/sh
+
+#
+# Init Tibero volume, which is used on Tibero service.
+#
+# environment variables:
+#   Check for the 'get_env.sh' file to get which environment variables are available.
+#
+
+# external envs
+export ENV_FILE    # which env file to read
+
+# path envs
+BIN_ORIG="$(readlink -f "${0}")"
+ROOT_DIR="$(dirname "${BIN_ORIG?:binary path error!}")"
+
+# load common env
+. "${ROOT_DIR}/get_env.sh"
+
+
+# copy asset files to predefined paths in the container
+${OCI_CMD} run -it -h "${TB_HOSTNAME}" -v "${TB_VOL_NAME}":"${TB_VOLUME_MOUNT_PATH}" \
+           -v "${TB_ASSET_DIR}":/mnt:Z -u root --entrypoint copy-tibero-config \
+           --rm --name "${TB_CNT_NAME}" "${TB_IMG_NAME}" \
+  || exit 1
+
+# initialize volume
+${OCI_CMD} run -it -h "${TB_HOSTNAME}" -v "${TB_VOL_NAME}":"${TB_VOLUME_MOUNT_PATH}" \
+           -e TB_PORT -e TB_VOLUME_MOUNT_PATH \
+           --rm --name "${TB_CNT_NAME}" "${TB_IMG_NAME}" init \
+  || exit 1
+
+
+# lock OCI_CMD
+if [ ! -f "${ROOT_DIR}/.oci_cmd_lock" ]
+then
+  printf "%s" "${OCI_CMD}" | tee "${ROOT_DIR}/.oci_cmd_lock" >/dev/null || exit 1
+  printf " - Container manager of the current service directory is locked to '%s'.\n" "${OCI_CMD}"
+fi

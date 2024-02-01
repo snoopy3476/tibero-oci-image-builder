@@ -1,0 +1,38 @@
+#!/bin/sh
+
+#
+# Get the status of the Tibero service container.
+# Prints string status to the stdout, and returns 0 if matches with the given status, otherwise returns 1
+#
+#
+# usage: ./tbstatus [status]
+#   - status: (default: 'Running')
+#             status to test current status.
+#             directly refer to the member keys in the {{.State}} of the inspect output.
+#             make sure that it's CASE SENSITIVE!
+#
+#     e.g.)
+#       $ ./tbstatus
+#       $ ./tbstatus Restarting
+#       $ ./tbstatus Paused
+#
+#
+# environment variables:
+#   Check for the 'get_env.sh' file to get which environment variables are available.
+#
+
+# external envs
+export ENV_FILE    # which env file to read
+
+# path envs
+BIN_ORIG="$(readlink -f "${0}")"
+ROOT_DIR="$(dirname "${BIN_ORIG?:binary path error!}")"
+
+# load common env
+. "${ROOT_DIR}/get_env.sh"
+
+
+# run tibero command on the running container
+STATUS_TO_CHECK="${1:-Running}"
+${OCI_CMD} container inspect -f '{{.State.Status}}' "${TB_CNT_NAME}" 2>/dev/null || { printf "not-found\n"; exit 1; }
+test "$(${OCI_CMD} container inspect -f "{{.State.${STATUS_TO_CHECK}}}" "${TB_CNT_NAME}" >/dev/null 2>/dev/null)" = "true"

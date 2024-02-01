@@ -1,0 +1,69 @@
+# init-db.yml for Tibero OCI Image
+#
+# Initialize compose file for docker.io/tmaxfocus/tibero*
+#
+# Before doing compose, place necessary files
+# inside 'asset' directory of current working directory like below:
+#
+# ($TB_ASSET_DIR)/     : Asset root directory
+#   account_list       : Tibero ID/PW info list
+#                        Each line represents single user as follows: '(UserId)/(UserPassword)'
+#                        E.g) 'Foo/Bar'
+#   license.xml        : Tibero license file
+#
+#   ${TB_SID}.tip      : (Optional) tibero tip file
+#   init.sql           : (Optional) custom initialization SQL after default DB and account initialization steps
+#
+
+
+# envs
+#
+# [REQUIRED]
+#   - TB_HOSTNAME: Tibero hostname: must be the same with licensee name in license.xml
+#   - TB_IMG_NAME: Tibero image to use
+#
+# [OPTIONAL]
+#   - TB_ASSET_DIR: Tibero asset directory: contains files above (default: 'asset' directory)
+#   - TB_CNT_NAME: Base name for Tibero container (default: tb)
+#   - TB_PORT: Tibero port to use (default: 10000)
+#   - TB_VOLUME_MOUNT_PATH: External volume mount path - this determines which data to persist
+#                           (default: '/opt/tibero/persistable')
+version: "3"
+
+
+services:
+
+  copy:
+    image: "${TB_IMG_NAME:?Missing environment variable for Tibero image name (TB_IMG_NAME)}"
+    container_name: "${TB_CNT_NAME:-tb}-${TB_PORT:-10000}-copy"
+    user: root
+    volumes:
+      - ${TB_ASSET_DIR:-./asset}:${TB_INIT_HOST_VOL:-/mnt}:Z
+      - type: volume
+        source: tibero-volume
+        target: ${TB_VOLUME_MOUNT_PATH:-/opt/tibero/persistable}
+    entrypoint: /bin/copy-tibero-config
+    network_mode: bridge
+
+  init:
+    image: "${TB_IMG_NAME:?Missing environment variable for Tibero image name (TB_IMG_NAME)}"
+    container_name: "${TB_CNT_NAME:-tb}-${TB_PORT:-10000}"
+    hostname: "${TB_HOSTNAME:?Missing environment variable for Tibero hostname (TB_HOSTNAME)}"
+    ports: [ "${TB_PORT:-10000}:8629" ]
+    volumes:
+      - type: volume
+        source: tibero-volume
+        target: ${TB_VOLUME_MOUNT_PATH:-/opt/tibero/persistable}
+    command: init
+    environment:
+      TB_VOLUME_MOUNT_PATH: ${TB_VOLUME_MOUNT_PATH:-/opt/tibero/persistable}
+    stdin_open: true
+    tty: true
+    depends_on:
+      copy:
+        condition: service_completed_successfully
+    network_mode: bridge
+
+volumes:
+  tibero-volume:
+    name: "${TB_CNT_NAME:-tb}-${TB_PORT:-10000}"

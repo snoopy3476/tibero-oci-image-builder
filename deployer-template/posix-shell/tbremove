@@ -1,0 +1,62 @@
+#!/bin/sh
+
+#
+# REMOVE ALL DATA OF THE TIBERO SERVICE, including DB DATA and CONFIGS.
+# To remove volume, disable the container first.
+#
+# usage: remove.sh [force]
+# args:
+#   force: do not prompt before remove all
+#
+# environment variables:
+#   Check for the 'get_env.sh' file to get which environment variables are available.
+#
+
+# external envs
+export ENV_FILE    # which env file to read
+
+# path envs
+BIN_ORIG="$(readlink -f "${0}")"
+ROOT_DIR="$(dirname "${BIN_ORIG?:binary path error!}")"
+
+# load common env
+. "${ROOT_DIR}/get_env.sh"
+
+
+# colors
+C_WARN_FG="$(tput setaf 1 2>/dev/null)"
+C_WARN_BG="$(tput setaf 0 2>/dev/null)$(tput setab 1 2>/dev/null)"
+C_RESET="$(tput sgr0 2>/dev/null)$(tput el 2>/dev/null)"
+
+
+# prompt user: if not 'y' or 'Y', then stop proceed
+read_normal()
+{
+  _="${2:?read_normal: No variable to read specified}"
+
+  trap 'printf "\n"; return 1' TERM HUP INT
+  printf "%s + %s:%s \n%s > %s " "${CX_C}${CF_Y}" "${1}" "${CX_C}" "${CF_G}" "${CF_R}"
+  read -r "${2}"
+  RET_VAL="${?}"
+  trap - TERM HUP INT
+  printf "%s\n" "${CX_C}"
+
+  return "${RET_VAL}"
+}
+if [ "${1}" != "force" ]
+then
+  _PROMPT="value_to_start_loop"
+  until [ "${_PROMPT}" = "y" ] || [ "${_PROMPT}" = "Y" ] \
+          || [ "${_PROMPT}" = "n" ] || [ "${_PROMPT}" = "N" ] || [ -z "${_PROMPT}" ]; do
+    read_normal " ${C_WARN_BG}[!!! WARNING !!!]${C_RESET} This process will ${C_WARN_FG}REMOVE ALL DB DATA${C_RESET} in the volume. Proceed? [${C_WARN_FG}y${C_RESET}/N]" _PROMPT || return 1
+  done
+  if [ "${_PROMPT}" != "y" ] && [ "${_PROMPT}" != "Y" ]; then exit 1; fi
+fi
+
+# remove volume
+${OCI_CMD} volume rm "${TB_VOL_NAME}" || exit 1
+
+
+# unlock OCI_CMD if service is completely removed
+printf "%s" "${OCI_CMD}" | tee "${ROOT_DIR}/.oci_cmd_lock" >/dev/null || exit 1
+printf " - Container manager of the current service directory is unlocked.\n"

@@ -1,0 +1,86 @@
+#!/bin/sh
+
+#
+# Get the environments and information of the Tibero service container.
+#
+# environment variables:
+#   Check for the 'get_env.sh' file to get which environment variables are available.
+#
+
+# external envs
+export ENV_FILE    # which env file to read
+
+# path envs
+BIN_ORIG="$(readlink -f "${0}")"
+ROOT_DIR="$(dirname "${BIN_ORIG?:binary path error!}")"
+
+# load common env
+. "${ROOT_DIR}/get_env.sh"
+
+
+# colors
+CF_B="$(tput setaf 0 2>/dev/null)"
+CF_R="$(tput setaf 1 2>/dev/null)"
+CF_G="$(tput setaf 2 2>/dev/null)"
+
+CB_G="$(tput setab 2 2>/dev/null)"
+
+CX_D="$(tput dim 2>/dev/null)"
+CX_C="$(tput sgr0 2>/dev/null)$(tput el 2>/dev/null)"
+
+
+# read current container status info
+CNT_STATUS_OUTPUT="$(${OCI_CMD} container inspect -f "{{.State.Status}}\n{{.Created}}\n{{.State.StartedAt}}\n{{.State.FinishedAt}}\n{{.HostConfig.ShmSize}}" "${TB_CNT_NAME}" 2>/dev/null)"
+LFCHAR='
+'
+STATUS_STATUS="$(printf "%s" "${CNT_STATUS_OUTPUT}" | cut -d"$LFCHAR" -f1 2>/dev/null)"
+STATUS_CREATED_AT="$(printf "%s" "${CNT_STATUS_OUTPUT}" | cut -d"$LFCHAR" -f2 2>/dev/null)"
+STATUS_STARTED_AT="$(printf "%s" "${CNT_STATUS_OUTPUT}" | cut -d"$LFCHAR" -f3 2>/dev/null)"
+STATUS_FINISHED_AT="$(printf "%s" "${CNT_STATUS_OUTPUT}" | cut -d"$LFCHAR" -f4 2>/dev/null)"
+STATUS_SHM_SIZE="$(printf "%s" "${CNT_STATUS_OUTPUT}" | cut -d"$LFCHAR" -f5 2>/dev/null)"
+command -v numfmt >/dev/null && STATUS_SHM_SIZE="$(printf "%s" "${STATUS_SHM_SIZE}" | numfmt --to=iec)"
+
+
+# print current details
+printf "
+%s [Details of Tibero service '%s%s%s'] %s 
+
+ - Container Base Information
+   - Container manager command: '%s%s%s'
+   - Image name: '%s%s%s'
+   - Container name: '%s%s%s'
+   - Volume name: '%s%s%s'
+
+ - Service Policy
+   - Tibero listener port: '%s%s%s'
+   - Container restart policy: '%s%s%s'
+   - Container stop wait timeout: '%s%s%s'
+   - Mount path of the volume in the container: '%s%s%s'
+
+ - Service Container Status
+   - Status: '%s%s%s'
+   - Created At: '%s%s%s'
+   - Started At: '%s%s%s'
+   - Finished At: '%s%s%s'
+   - Shared Memory Size: '%s%s%s'
+
+
+" "${CX_C}${CF_B}${CB_G}" "${CX_D}${CF_R}" "${ROOT_DIR}" "${CX_C}${CF_B}${CB_G}" "${CX_C}" \
+       \
+       "${CX_C}${CF_G}" "${OCI_CMD}" "${CX_C}" \
+       "${CX_C}${CF_G}" "${TB_IMG_NAME}" "${CX_C}" \
+       "${CX_C}${CF_G}" "${TB_CNT_NAME}" "${CX_C}" \
+       "${CX_C}${CF_G}" "${TB_VOL_NAME}" "${CX_C}" \
+       \
+       "${CX_C}${CF_G}" "${TB_PORT}" "${CX_C}" \
+       "${CX_C}${CF_G}" "${TB_CNT_RESTART_POLICY}" "${CX_C}" \
+       "${CX_C}${CF_G}" "${TB_CNT_STOP_TIMEOUT}" "${CX_C}" \
+       "${CX_C}${CF_G}" "${TB_VOLUME_MOUNT_PATH}" "${CX_C}" \
+       \
+       "${CX_C}${CF_G}" "${STATUS_STATUS:-(Not available)}" "${CX_C}" \
+       "${CX_C}${CF_G}" "${STATUS_CREATED_AT:-(Not available)}" "${CX_C}" \
+       "${CX_C}${CF_G}" "${STATUS_STARTED_AT:-(Not available)}" "${CX_C}" \
+       "${CX_C}${CF_G}" "${STATUS_FINISHED_AT:-(Not available)}" "${CX_C}" \
+       "${CX_C}${CF_G}" "${STATUS_SHM_SIZE:-(Not available)}" "${CX_C}"
+
+true

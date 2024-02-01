@@ -1,0 +1,27 @@
+#!/bin/sh
+
+#
+# Start the Tibero service container with the pre-initialized volume.
+#
+# environment variables:
+#   Check for the 'get_env.sh' file to get which environment variables are available.
+#
+
+# external envs
+export ENV_FILE    # which env file to read
+
+# path envs
+BIN_ORIG="$(readlink -f "${0}")"
+ROOT_DIR="$(dirname "${BIN_ORIG?:binary path error!}")"
+
+# load common env
+. "${ROOT_DIR}/get_env.sh"
+
+
+# enable, create, then start the Tibero service container, with auto-restarting when stopped
+${OCI_CMD} run -h "${TB_HOSTNAME}" -d \
+           -v "${TB_VOL_NAME}":"${TB_VOLUME_MOUNT_PATH}" \
+           -p "${TB_PORT}":8629 --stop-timeout "${TB_CNT_STOP_TIMEOUT}" \
+           --restart="${TB_CNT_RESTART_POLICY}" --name "${TB_CNT_NAME}" \
+           -e TB_PORT -e TB_VOLUME_MOUNT_PATH \
+           "${TB_IMG_NAME}"

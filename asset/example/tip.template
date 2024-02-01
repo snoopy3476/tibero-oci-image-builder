@@ -1,0 +1,19 @@
+#-------------------------------------------------------------------------------
+#
+# RDBMS initialization parameter
+#
+#-------------------------------------------------------------------------------
+
+DB_NAME=@SID@
+LISTENER_PORT=@PORT@
+#CONTROL_FILES="@HOME@/database/@SID@/c1.ctl"
+#CERTIFICATE_FILE="@HOME@/config/tb_wallet/@SID@.crt"
+#PRIVKEY_FILE="@HOME@/config/tb_wallet/@SID@.key"
+#WALLET_FILE="@HOME@/config/tb_wallet/WALLET"
+#ILOG_MAP="@HOME@/config/ilog.map"
+
+TOTAL_SHM_SIZE=4G
+MEMORY_TARGET=8G
+
+MAX_SESSION_COUNT=50
+ACTIVE_SESSION_TIMEOUT=610
