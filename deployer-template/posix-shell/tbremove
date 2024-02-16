@@ -58,5 +58,5 @@ ${OCI_CMD} volume rm "${TB_VOL_NAME}" || exit 1
 
 
 # unlock OCI_CMD if service is completely removed
-printf "%s" "${OCI_CMD}" | tee "${ROOT_DIR}/.oci_cmd_lock" >/dev/null || exit 1
+rm -f "${ROOT_DIR}/.oci_cmd_lock"
 printf " - Container manager of the current service directory is unlocked.\n"

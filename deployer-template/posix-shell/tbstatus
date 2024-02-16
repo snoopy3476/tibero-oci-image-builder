@@ -35,4 +35,4 @@ ROOT_DIR="$(dirname "${BIN_ORIG?:binary path error!}")"
 # run tibero command on the running container
 STATUS_TO_CHECK="${1:-Running}"
 ${OCI_CMD} container inspect -f '{{.State.Status}}' "${TB_CNT_NAME}" 2>/dev/null || { printf "not-found\n"; exit 1; }
-test "$(${OCI_CMD} container inspect -f "{{.State.${STATUS_TO_CHECK}}}" "${TB_CNT_NAME}" >/dev/null 2>/dev/null)" = "true"
+test "$(${OCI_CMD} container inspect -f "{{.State.${STATUS_TO_CHECK}}}" "${TB_CNT_NAME}" 2>/dev/null)" = "true"
