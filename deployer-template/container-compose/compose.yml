@@ -36,7 +36,6 @@ services:
     stop_grace_period: ${TB_CNT_STOP_TIMEOUT:-120s}
     environment:
       TB_READY_SIGNAL_PATTERN: "${TB_READY_SIGNAL_PATTERN:-}"
-    network_mode: bridge
 
 volumes:
   tb-vol:
