@@ -25,6 +25,7 @@ Place files here to make them the default configs of the built Tibero image.
 
 - (Optional) `tip.template`: Custom configuration template, used when generation `${TB_SID}.tip` config file
   - Default value of `${TB_SID}` is `tibero`, if the environment variable is not set during the img build step.
+  - All shell variables (`${VARNAME}`) are replaced with its actual value of environment variables using `envsubst`
   - e.g.)
     ```
     DB_NAME=@SID@
@@ -35,28 +36,9 @@ Place files here to make them the default configs of the built Tibero image.
     \#WALLET_FILE="@HOME@/config/tb_wallet/WALLET"
     \#ILOG_MAP="@HOME@/config/ilog.map"
 
-    TOTAL_SHM_SIZE=4G
-    MEMORY_TARGET=8G
+    TOTAL_SHM_SIZE=${TB_TOTAL_SHM_SIZE}
+    MEMORY_TARGET=${TB_MEMORY_TARGET}
 
-    MAX_SESSION_COUNT=50
-    ACTIVE_SESSION_TIMEOUT=610
-    ```
-
-- (Optional) `${TB_SID}.tip`: Custom configuration, which replaces default `${TB_SID}.tip` file.
-  - Default value of `${TB_SID}` is `tibero`, if the environment variable is not set during the img build step.
-  - E.g.) `tibero.tip`:
-    ```
-    DB_NAME=tibero
-    LISTENER_PORT=8629
-    CONTROL_FILES="/opt/tibero/tibero-home/database/tibero/c1.ctl"
-    #CERTIFICATE_FILE="/opt/tibero/tibero-home/config/tb_wallet/tibero.crt"
-    #PRIVKEY_FILE="/opt/tibero/tibero-home/config/tb_wallet/tibero.key"
-    #WALLET_FILE="/opt/tibero/tibero-home/config/tb_wallet/WALLET"
-    #ILOG_MAP="/opt/tibero/tibero-home/config/ilog.map"
-
-    TOTAL_SHM_SIZE=4G
-    MEMORY_TARGET=8G
-
-    MAX_SESSION_COUNT=50
-    ACTIVE_SESSION_TIMEOUT=610
+    MAX_SESSION_COUNT=${TB_MAX_SESSION_COUNT}
+    ACTIVE_SESSION_TIMEOUT=${TB_ACTIVE_SESSION_TIMEOUT}
     ```

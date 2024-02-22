@@ -19,7 +19,7 @@ TIBERO_JDK_VERSION="${3:?No JDK version given}"
 
 
 # check required binaries
-for bin in jq envsubst; do command -v "${bin}" >/dev/null || { printf " *** No '%s' command found! *** \n" "${bin}"; exit 1; }; done
+for bin in jq envsubst rev "$(printf "%s" "${OCI_CMD}" | rev | cut -d' ' -f1 | rev)"; do command -v "${bin}" >/dev/null || { printf " *** No '%s' command found! *** \n" "${bin}"; exit 1; }; done
 
 
 
@@ -42,11 +42,15 @@ TIBERO_IMG_TAG_SHORT="${TIBERO_IMG_VERSION:+${TIBERO_IMG_VERSION}_}jdk${TIBERO_J
 TIBERO_IMG_TAG="${TIBERO_IMG_TAG_SHORT}_$(basename "${TIBERO_PACKAGE%.tar.gz}" | tr '_' '-')" || exit 1
 
 TIBERO_LICENSE_FILE="${TIBERO_PACKAGE_PREPARED_DIR}/license.xml"
-TIBERO_DBUSER_DATAFILE_COUNT="${TIBERO_DBUSER_DATAFILE_COUNT:-1}"
 TIBERO_HOSTNAME="$(grep -o "<licensee>[^<]*</licensee>" "${TIBERO_LICENSE_FILE}" | sed 's/<licensee>\([^>]*\)<\/licensee>/\1/')" || exit 1
 
 TIBERO_IMG_ENTRYPOINT="$(${OCI_CMD} inspect -f '{{json .Config.Entrypoint}}' "${TIBERO_SRC_IMG_NAME}:${TIBERO_IMG_TAG}")" || exit 1
 TIBERO_IMG_CMD="$(${OCI_CMD} inspect -f '{{json .Config.Cmd}}' "${TIBERO_SRC_IMG_NAME}:${TIBERO_IMG_TAG}")" || exit 1
+
+
+
+# envs for tip.template
+
 
 
 
@@ -88,8 +92,10 @@ trap 'RET_VAL="${?}"; ${OCI_CMD} rm -f "${TIBERO_CNT_ID}"; [ -d "${TIBERO_PREPAR
 
 
 printf " - Starting the init container in sleep mode...\n"
+mkdir -p "${TIBERO_PACKAGE_PREPARED_DIR}"
+touch "${TIBERO_PACKAGE_PREPARED_DIR}/.env"
 TIBERO_CNT_ID="$(${OCI_CMD} create -h "${TIBERO_HOSTNAME}" \
-  -e TB_DBUSER_DATAFILE_COUNT="${TIBERO_DBUSER_DATAFILE_COUNT}" \
+  --env-file "${TIBERO_PACKAGE_PREPARED_DIR}/.env" \
   --entrypoint /bin/sh "${TIBERO_SRC_IMG_NAME}:${TIBERO_IMG_TAG}" \
   -c "trap 'kill -9 \${SLEEP_PID}; exit' TERM; while true; do sleep infinity & SLEEP_PID=\${!}; wait \${SLEEP_PID}; done;")" || exit 1
 ${OCI_CMD} start "${TIBERO_CNT_ID}" || exit 1
@@ -97,7 +103,8 @@ ${OCI_CMD} start "${TIBERO_CNT_ID}" || exit 1
 
 
 printf " - Copying necessary files to the new init container...\n"
-envsubst_to_tmpfile "${TIBERO_PACKAGE_PREPARED_DIR}/license.xml" "${TIBERO_PACKAGE_PREPARED_DIR}/account-list" "${TIBERO_PACKAGE_PREPARED_DIR}/tip" || exit 1
+envsubst_to_tmpfile "${TIBERO_PACKAGE_PREPARED_DIR}/license.xml" "${TIBERO_PACKAGE_PREPARED_DIR}/account-list" || exit 1
+if [ -r "${TIBERO_PACKAGE_PREPARED_DIR}/tip.template" ]; then cp "${TIBERO_PACKAGE_PREPARED_DIR}/tip.template" "${TIBERO_PREPARED_ASSET_DIR}/tip.template" || exit 1; fi
 if find "${TIBERO_PACKAGE_PREPARED_DIR}/"*.sql 2>/dev/null | grep . >/dev/null; then envsubst_to_tmpfile "${TIBERO_PACKAGE_PREPARED_DIR}/"*.sql || exit 1; fi
 ${OCI_CMD} cp "${TIBERO_PREPARED_ASSET_DIR}/." "${TIBERO_CNT_ID}":"${TB_INIT_HOST_VOL:?No TB_INIT_HOST_VOL set!}" || exit 1
 rm -rf "${TIBERO_PREPARED_ASSET_DIR}"

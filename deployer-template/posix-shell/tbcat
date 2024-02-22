@@ -30,9 +30,10 @@ CX_C="$(tput sgr0 2>/dev/null)$(tput el 2>/dev/null)"
 
 
 # read current container status info
-CNT_STATUS_OUTPUT="$(${OCI_CMD} container inspect -f "{{.State.Status}}\n{{.Created}}\n{{.State.StartedAt}}\n{{.State.FinishedAt}}\n{{.HostConfig.ShmSize}}" "${TB_CNT_NAME}" 2>/dev/null)"
 LFCHAR='
 '
+CNT_STATUS_OUTPUT="$(${OCI_CMD} container inspect -f "{{.State.Status}}${LFCHAR}{{.Created}}${LFCHAR}{{.State.StartedAt}}${LFCHAR}{{.State.FinishedAt}}${LFCHAR}{{.HostConfig.ShmSize}}" "${TB_CNT_NAME}" 2>/dev/null)"
+"${ROOT_DIR}/tibero" test 2>/dev/null && STATUS_CONNECTABLE="Yes" || STATUS_CONNECTABLE="No"
 STATUS_STATUS="$(printf "%s" "${CNT_STATUS_OUTPUT}" | cut -d"$LFCHAR" -f1 2>/dev/null)"
 STATUS_CREATED_AT="$(printf "%s" "${CNT_STATUS_OUTPUT}" | cut -d"$LFCHAR" -f2 2>/dev/null)"
 STATUS_STARTED_AT="$(printf "%s" "${CNT_STATUS_OUTPUT}" | cut -d"$LFCHAR" -f3 2>/dev/null)"
@@ -58,6 +59,7 @@ printf "
    - Mount path of the volume in the container: '%s%s%s'
 
  - Service Container Status
+   - Connectable: '%s%s%s'
    - Status: '%s%s%s'
    - Created At: '%s%s%s'
    - Started At: '%s%s%s'
@@ -77,6 +79,7 @@ printf "
        "${CX_C}${CF_G}" "${TB_CNT_STOP_TIMEOUT}" "${CX_C}" \
        "${CX_C}${CF_G}" "${TB_VOLUME_MOUNT_PATH}" "${CX_C}" \
        \
+       "${CX_C}${CF_G}" "${STATUS_CONNECTABLE:-(Not available)}" "${CX_C}" \
        "${CX_C}${CF_G}" "${STATUS_STATUS:-(Not available)}" "${CX_C}" \
        "${CX_C}${CF_G}" "${STATUS_CREATED_AT:-(Not available)}" "${CX_C}" \
        "${CX_C}${CF_G}" "${STATUS_STARTED_AT:-(Not available)}" "${CX_C}" \

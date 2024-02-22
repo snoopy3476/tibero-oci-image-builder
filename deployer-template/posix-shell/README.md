@@ -61,7 +61,7 @@ Initialize as above first!
   ```
 
 
-## Abstract of `tibero` Commands (v1.0)
+## Abstract of `tibero` Commands (v1.1)
 
  * Only when the container is running
 
@@ -94,6 +94,7 @@ Initialize as above first!
  * Always (on both running and stopped)
 
    - **`help`**: print this help message  
+   - **`test`**: test if Tibero is running and connectable  
    - **`user`**: manage users  
      - **`ls`**  
      - **`detail`** *[username]*  

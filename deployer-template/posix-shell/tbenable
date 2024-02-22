@@ -23,5 +23,5 @@ ${OCI_CMD} run -h "${TB_HOSTNAME}" -d \
            -v "${TB_VOL_NAME}":"${TB_VOLUME_MOUNT_PATH}" \
            -p "${TB_PORT}":8629 --stop-timeout "${TB_CNT_STOP_TIMEOUT}" \
            --restart="${TB_CNT_RESTART_POLICY}" --name "${TB_CNT_NAME}" \
-           -e TB_PORT -e TB_VOLUME_MOUNT_PATH \
+           -e TB_PORT -e TB_VOLUME_MOUNT_PATH --env-file "${ROOT_DIR}/${ENV_FILE}" \
            "${TB_IMG_NAME}"

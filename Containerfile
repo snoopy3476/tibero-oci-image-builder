@@ -1,6 +1,6 @@
 
 #############################################################
-############# TIBERO OCI IMAGE BUILDER (v1.0) ###############
+############# TIBERO OCI IMAGE BUILDER (v1.1) ###############
 #############################################################
 ################## kim.hwiwon@outlook.com ###################
 #############################################################
@@ -32,6 +32,12 @@ ARG TB_CHARSET="UTF8"
 ARG TB_NCHARSET="UTF8"
 ARG TB_DBUSER_DATAFILE_COUNT="5"
 ARG TB_INIT_HOST_VOL="/mnt"
+
+# args for tip file default envsubst
+ARG TB_TOTAL_SHM_SIZE="4G"
+ARG TB_MEMORY_TARGET="6G"
+ARG TB_MAX_SESSION_COUNT="50"
+ARG TB_ACTIVE_SESSION_TIMEOUT="610"
 
 
 
@@ -83,7 +89,8 @@ ENV TB_DBDIR="${TB_HOME}/database"
 ENV TB_LICENSE="${TB_HOME}/license/license.xml"
 ENV TB_LICENSE_DEFAULT="${TB_ACC_PERSIST_DEFAULTS}/license.xml"
 ENV TB_TIP="${TB_HOME}/config/${TB_SID}.tip"
-ENV TB_TIP_DEFAULT="${TB_ACC_PERSIST_DEFAULTS}/${TB_SID}.tip"
+ENV TB_TIP_TEMPLATE="${TB_HOME}/config/tip.template"
+ENV TB_TIP_TEMPLATE_DEFAULT="${TB_ACC_PERSIST_DEFAULTS}/tip.template"
 ENV TB_PORT="${TB_PORT}"
 
 # system envs
@@ -104,8 +111,7 @@ RUN mkdir -p "${TB_ACC_PERSIST_DEFAULTS}" "${TB_ACC_PERSIST_CONFIG}"/sql "${TB_A
 
 # link original path to persistable
 RUN ln -snf "${TB_ACC_PERSIST_DB}" "${TB_DBDIR}" \
-    && ln -snf "${TB_ACC_PERSIST_CONFIG}"/license/license.xml "${TB_LICENSE}" \
-    && ln -snf "${TB_ACC_PERSIST_CONFIG}"/tip/"${TB_SID}".tip "${TB_TIP}"
+    && ln -snf "${TB_ACC_PERSIST_CONFIG}"/license/license.xml "${TB_LICENSE}"
 
 
 # place/generate tibero related files/dirs
@@ -119,21 +125,18 @@ RUN if [ -f "${ASSET}"/create-db.sql ]; then \
 RUN if [ -f "${ASSET}"/license.xml ]; then \
        mv "${ASSET}"/license.xml "${TB_LICENSE_DEFAULT}"; \
     fi
-RUN if [ -f "${ASSET}"/tip.template ]; then \
-       mv "${ASSET}"/tip.template "${TB_HOME}"/config/; \
-    fi
-RUN cd "${TB_HOME}"/config || exit 1; ./gen_tip.sh \
-    && mv "${TB_ACC_PERSIST_CONFIG}"/tip/"${TB_SID}".tip "${TB_TIP_DEFAULT}"; \
-    \
-    if [ -f "${ASSET}"/"${TB_SID}".tip ]; then \
-       mv "${ASSET}"/"${TB_SID}".tip "${TB_TIP_DEFAULT}"; \
+RUN if [ -r "${TB_TIP_TEMPLATE}" ]; then \
+       mv "${TB_TIP_TEMPLATE}" "${TB_TIP_TEMPLATE_DEFAULT}" || exit 1; \
+    fi; \
+    if [ -f "${ASSET}"/tip.template ]; then \
+       mv "${ASSET}"/tip.template "${TB_TIP_TEMPLATE_DEFAULT}"; \
     fi
 
 
 
 # install required libraries for tibero
 RUN apt-get update && \
-    apt-get install -y libaio1 procps libncurses5 terminfo
+    apt-get install -y libaio1 procps libncurses5 terminfo gettext-base
 
 
 # copy necessary libraries for Tibero
@@ -141,7 +144,7 @@ COPY ./script-container/copy-deps.sh "/copy-deps.sh"
 RUN chmod +x "/copy-deps.sh"
 RUN EXCLUDE_PATH="${TB_HOME}" /copy-deps.sh "${TB_ACC_LOCAL_LIB}" "${TB_HOME}"/bin "${TB_HOME}"/client/bin
 
-RUN BIN_LIST="ps tput"; \
+RUN BIN_LIST="ps tput envsubst"; \
     for bin in ${BIN_LIST}; \
     do \
       BIN_PATH="$(which "${bin}")"; \
@@ -197,6 +200,11 @@ ARG TB_NCHARSET
 ARG TB_DBUSER_DATAFILE_COUNT
 ARG TB_INIT_HOST_VOL
 
+ARG TB_TOTAL_SHM_SIZE
+ARG TB_MEMORY_TARGET
+ARG TB_MAX_SESSION_COUNT
+ARG TB_ACTIVE_SESSION_TIMEOUT
+
 # envs
 ENV TB_ACC_NAME="${TB_ACC_NAME}"
 ENV TB_ACC_HOME="${TB_ACC_HOME}"
@@ -216,13 +224,20 @@ ENV TB_DBDIR="${TB_HOME}/database"
 ENV TB_LICENSE="${TB_HOME}/license/license.xml"
 ENV TB_LICENSE_DEFAULT="${TB_ACC_PERSIST_DEFAULTS}/license.xml"
 ENV TB_TIP="${TB_HOME}/config/${TB_SID}.tip"
-ENV TB_TIP_DEFAULT="${TB_ACC_PERSIST_DEFAULTS}/${TB_SID}.tip"
+ENV TB_TIP_TEMPLATE="${TB_HOME}/config/tip.template"
+ENV TB_TIP_TEMPLATE_DEFAULT="${TB_ACC_PERSIST_DEFAULTS}/tip.template"
 ENV TB_CHARSET="${TB_CHARSET}"
 ENV TB_NCHARSET="${TB_NCHARSET}"
 ENV TB_DBUSER_DATAFILE_COUNT="${TB_DBUSER_DATAFILE_COUNT}"
 ENV TB_PORT="${TB_PORT}"
 ENV TB_INIT_HOST_VOL="${TB_INIT_HOST_VOL}"
 ENV TMPSQL="${TB_ACC_HOME}/.tmpsql"
+
+# tip file envsubst envs
+ENV TB_TOTAL_SHM_SIZE="${TB_TOTAL_SHM_SIZE}"
+ENV TB_MEMORY_TARGET="${TB_MEMORY_TARGET}"
+ENV TB_MAX_SESSION_COUNT="${TB_MAX_SESSION_COUNT}"
+ENV TB_ACTIVE_SESSION_TIMEOUT="${TB_ACTIVE_SESSION_TIMEOUT}"
 
 # system envs
 ENV LD_LIBRARY_PATH="/lib:${TB_JDK_HOME}/lib:${TB_JDK_HOME}/lib/server:${TB_HOME}/lib:${TB_HOME}/client/lib:${TB_ACC_LOCAL_LIB}"
@@ -264,6 +279,9 @@ RUN for lib in ${TB_ACC_LOCAL_LIB}/*; \
 
 COPY --chown=0:"${TB_ACC_GID}" ./script-container/copy-tibero-config.sh /bin/copy-tibero-config
 RUN chmod 550 /bin/copy-tibero-config
+
+COPY --chown=0:"${TB_ACC_GID}" ./script-container/test-tibero-conn.sh /bin/test-tibero-conn
+RUN chmod 550 /bin/test-tibero-conn
 
 COPY --chown=0:"${TB_ACC_GID}" ./script-container/tibero.sh /bin/tibero
 RUN chmod 550 /bin/tibero

@@ -89,6 +89,18 @@ main() {
     ;;
 
 
+  test)
+    if /bin/test-tibero-conn
+    then
+      printf "%sconnectable%s\n" "$CX_C$CF_G" "$CX_C"
+      true
+    else
+      printf "%snot-connectable%s\n" "$CX_C$CF_R" "$CX_C"
+      false
+    fi
+    ;;
+
+
   help)
     print_help
     ;;
@@ -129,19 +141,20 @@ init_svc() {
 
   # follow symlink env
   TB_LICENSE_ORIG="$(readlink -f "${TB_LICENSE}")"
-  TB_TIP_ORIG="$(readlink -f "${TB_TIP}")"
   TB_DBDIR_ORIG="$(readlink -f "$TB_DBDIR")"
 
-  # copy default configs if not exist
+  # copy default configs or generate them
+  if [ ! -r "${TB_ACC_PERSIST_CONFIG}/tip/tip.template" ]
+  then
+    cp "${TB_TIP_TEMPLATE_DEFAULT}" "${TB_ACC_PERSIST_CONFIG}/tip/tip.template" || exit 1
+  fi
+  envsubst < "${TB_ACC_PERSIST_CONFIG}/tip/tip.template" > "${TB_TIP_TEMPLATE}" || exit 1
+  ( cd "${TB_HOME}/config/" || exit 1; rm -f ./*.tip; ./gen_tip.sh || exit 1 ) || exit 1
+
   if [ ! -r "${TB_LICENSE_ORIG}" ] && [ -r "${TB_LICENSE_DEFAULT}" ]
   then
     mkdir -p "$(dirname "${TB_LICENSE_ORIG}")"
     cp "${TB_LICENSE_DEFAULT}" "${TB_LICENSE_ORIG}"
-  fi
-  if [ ! -r "${TB_TIP_ORIG}" ] && [ -r "${TB_TIP_DEFAULT}" ]
-  then
-    mkdir -p "$(dirname "${TB_TIP_ORIG}")"
-    cp "${TB_TIP_DEFAULT}" "${TB_TIP_ORIG}"
   fi
 
 
@@ -256,26 +269,28 @@ exec_svc() {
 
   # follow symlink env
   TB_LICENSE_ORIG="$(readlink -f "${TB_LICENSE}")"
-  TB_TIP_ORIG="$(readlink -f "${TB_TIP}")"
   TB_DBDIR_ORIG="$(readlink -f "$TB_DBDIR")"
 
-  # copy default configs if not exist
-  if [ ! -r "${TB_LICENSE_ORIG}" ]
+  # copy default configs or generate them
+  if [ ! -r "${TB_ACC_PERSIST_CONFIG}/tip/tip.template" ]
+  then
+    cp "${TB_TIP_TEMPLATE_DEFAULT}" "${TB_ACC_PERSIST_CONFIG}/tip/tip.template" || exit 1
+  fi
+  envsubst < "${TB_ACC_PERSIST_CONFIG}/tip/tip.template" > "${TB_TIP_TEMPLATE}" || exit 1
+  ( cd "${TB_HOME}/config/" || exit 1; rm -f ./*.tip; ./gen_tip.sh || exit 1 ) || exit 1
+
+  if [ ! -r "${TB_LICENSE_ORIG}" ] && [ -r "${TB_LICENSE_DEFAULT}" ]
   then
     mkdir -p "$(dirname "${TB_LICENSE_ORIG}")"
     cp "${TB_LICENSE_DEFAULT}" "${TB_LICENSE_ORIG}"
   fi
-  if [ ! -r "${TB_TIP_ORIG}" ]
-  then
-    mkdir -p "$(dirname "${TB_TIP_ORIG}")"
-    cp "${TB_TIP_DEFAULT}" "${TB_TIP_ORIG}"
-  fi
+
 
 
   [ -x "${TB_HOME}"/bin/tbdown ] && { printf "y\n" | "${TB_HOME}"/bin/tbdown clean | print_log; }
   "${TB_HOME}"/bin/tbboot | print_log "^Tibero instance started up (.*)\.$"
 
-  if ! wait_for_tbsvr
+  if ! wait_for_tbsvr connect
   then
     printf "%s * Starting tibero FAILED! * %s \n" "${CX_C}${CF_B}${CB_R}" "${CX_C}" >&2
     return 1
@@ -443,7 +458,7 @@ print_help() {
 
 
 %s=============================================================%s 
-%s --------[ %stibero%s container commands usage (v1.0) ]--------- %s 
+%s --------[ %stibero%s container commands usage (v1.1) ]--------- %s 
 %s                                                             %s 
 %s                                                             %s 
 %s * Only when the container is %srunning%s                        %s 
@@ -475,6 +490,7 @@ print_help() {
 %s * Always (on both running and stopped)                      %s 
 %s                                                             %s 
 %s   - %shelp%s: print this help message                           %s 
+%s   - %stest%s: test if Tibero is running and connectable         %s 
 %s   - %suser%s: manage users                                      %s 
 %s     - %sls%s                                                    %s 
 %s     - %sdetail%s [username]                                     %s 
@@ -532,6 +548,7 @@ print_help() {
       "${CX_C}${CF_B}${CB_Y}$CX_B" "${CX_C}" \
       "${CX_C}${CF_B}${CB_Y}" "${CX_C}" \
       \
+      "${CX_C}${CF_B}${CB_Y}" "$CX_B$CF_M" "${CX_C}${CF_B}${CB_Y}" "${CX_C}" \
       "${CX_C}${CF_B}${CB_Y}" "$CX_B$CF_M" "${CX_C}${CF_B}${CB_Y}" "${CX_C}" \
       "${CX_C}${CF_B}${CB_Y}" "$CX_B$CF_M" "${CX_C}${CF_B}${CB_Y}" "${CX_C}" \
       "${CX_C}${CF_B}${CB_Y}" "$CX_B$CF_M" "${CX_C}${CF_B}${CB_Y}" "${CX_C}" \
@@ -951,6 +968,16 @@ wait_for_tbsvr() {
   if [ "${WAIT_FOR_CLOSE}" = "open" ]
   then
     until pgrep -x "${TB_HOME}/bin/tblistener" >/dev/null 2>/dev/null; do
+      if [ "${WAIT_SEC}" -ge "${TOTAL_WAIT_SEC}" ]; then
+        return 1
+      fi
+      WAIT_SEC="$((WAIT_SEC + 1))"
+      sleep 1
+    done
+    return 0
+  elif [ "${WAIT_FOR_CLOSE}" = "connect" ]
+  then
+    until test-tibero-conn >/dev/null 2>/dev/null; do
       if [ "${WAIT_SEC}" -ge "${TOTAL_WAIT_SEC}" ]; then
         return 1
       fi

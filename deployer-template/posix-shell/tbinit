@@ -26,7 +26,7 @@ ${OCI_CMD} run -it -h "${TB_HOSTNAME}" -v "${TB_VOL_NAME}":"${TB_VOLUME_MOUNT_PA
 
 # initialize volume
 ${OCI_CMD} run -it -h "${TB_HOSTNAME}" -v "${TB_VOL_NAME}":"${TB_VOLUME_MOUNT_PATH}" \
-           -e TB_PORT -e TB_VOLUME_MOUNT_PATH \
+           -e TB_PORT -e TB_VOLUME_MOUNT_PATH --env-file "${ROOT_DIR}/${ENV_FILE}" \
            --rm --name "${TB_CNT_NAME}" "${TB_IMG_NAME}" init \
   || exit 1
 

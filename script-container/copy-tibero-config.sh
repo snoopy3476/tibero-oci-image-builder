@@ -43,10 +43,8 @@ copy_if_exist "${TB_INIT_HOST_VOL}"/license.xml "${TB_ACC_PERSIST_CONFIG}/licens
 # account-list
 copy_if_exist "${TB_INIT_HOST_VOL}"/account-list "${TB_ACC_FILE}" || exit 1
 
-# tibero tip (and rename to ${TB_SID}.tip)
-copy_if_exist "${TB_INIT_HOST_VOL}"/tip "${TB_ACC_PERSIST_CONFIG}/tip/${TB_SID:?No TB_SID set!}.tip" || exit 1
-find "${TB_INIT_HOST_VOL}"/*.tip 2>/dev/null | grep . >/dev/null && \
-  for tip in "${TB_INIT_HOST_VOL}"/*.tip; do copy_if_exist "${tip}" "${TB_ACC_PERSIST_CONFIG}/tip/$(basename "${tip}")" || exit 1; done
+# tibero tip template
+copy_if_exist "${TB_INIT_HOST_VOL}"/tip.template "${TB_ACC_PERSIST_CONFIG}/tip/tip.template" || exit 1
 
 # sql
 copy_if_exist "${TB_INIT_HOST_VOL}"/create-db.sql "${TB_CUSTOM_DB_CREATE_SQL}" || exit 1

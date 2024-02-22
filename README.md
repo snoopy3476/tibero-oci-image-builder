@@ -48,7 +48,7 @@
   - Not created by default unless `./asset/account-list` file exists: image users are prompted to enter username and password on start
 
 
-## Abstract of `tibero` Commands (v1.0)
+## Abstract of `tibero` Commands (v1.1)
 
 You can utilize `tibero` command inside the image, on both running Tibero container or a new one
 
@@ -80,6 +80,7 @@ You can utilize `tibero` command inside the image, on both running Tibero contai
  * Always (on both running and stopped)
 
    - **`help`**: print this help message  
+   - **`test`**: test if Tibero is running and connectable  
    - **`user`**: manage users  
      - **`ls`**  
      - **`detail`** *[username]*  
