@@ -25,7 +25,7 @@ Initialize as above first!
 
 - Enable and start the Tibero service
   ```shell
-  ./tbenable
+  ./tbboot
   ```
 
 - Show and follow logs of the Tibero service (Press `Ctrl` + `C` key to stop printing logs)
@@ -35,7 +35,7 @@ Initialize as above first!
 
 - Disable and stop the Tibero service (the container is removed, the volume is not)
   ```shell
-  ./tbdisable
+  ./tbdown
   ```
 
 - Cleanup the remaining volume  

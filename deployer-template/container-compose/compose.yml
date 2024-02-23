@@ -36,6 +36,13 @@ services:
     stop_grace_period: ${TB_CNT_STOP_TIMEOUT:-120s}
     environment:
       TB_READY_SIGNAL_PATTERN: "${TB_READY_SIGNAL_PATTERN:-}"
+    healthcheck:
+      test: "/bin/test-tibero-conn"
+      interval: "${CNT_HEALTH_INTERVAL:-1m}"
+      timeout: "${CNT_HEALTH_TIMEOUT:-5s}"
+      retries: "${CNT_HEALTH_RETRIES:-10}"
+      start_period: "${CNT_HEALTH_START_PERIOD:-10s}"
+      start_interval: "${CNT_HEALTH_START_INTERVAL:-5s}"
 
 volumes:
   tb-vol:
